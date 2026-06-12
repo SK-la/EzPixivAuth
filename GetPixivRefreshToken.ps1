@@ -9,7 +9,7 @@
     into Ez2Lazer settings, or rename the template to pixiv_auth.json.
 
 .PARAMETER DataPath
-    osu data directory (same folder as client.realm). Auto-detected when omitted.
+    Ez2Lazer data directory (same folder as client.realm). Auto-detected when omitted.
 
 .EXAMPLE
     Double-click GetPixivRefreshToken.bat
@@ -45,7 +45,7 @@ function Get-StorageIniFullPath {
     return $null
 }
 
-function Test-OsuDataDirectory {
+function Test-Ez2LazerDataDirectory {
     param([string]$Path)
 
     if ([string]::IsNullOrWhiteSpace($Path) -or -not (Test-Path -LiteralPath $Path)) {
@@ -59,20 +59,72 @@ function Test-OsuDataDirectory {
     return @(Get-ChildItem -LiteralPath $Path -Filter 'client_*.realm' -ErrorAction SilentlyContinue).Count -gt 0
 }
 
-function Resolve-OsuDataPath {
-    $defaultRoot = Join-Path $env:APPDATA 'osu'
-    $customPath = Get-StorageIniFullPath -IniPath (Join-Path $defaultRoot 'storage.ini')
+function Add-UniquePathCandidate {
+    param(
+        [System.Collections.Generic.List[string]]$List,
+        [System.Collections.Generic.HashSet[string]]$Seen,
+        [string]$Path
+    )
 
-    if ($customPath -and (Test-OsuDataDirectory $customPath)) {
-        return (Resolve-Path -LiteralPath $customPath).Path
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return
     }
 
-    if (Test-OsuDataDirectory $defaultRoot) {
-        return (Resolve-Path -LiteralPath $defaultRoot).Path
+    try {
+        $normalized = [System.IO.Path]::GetFullPath($Path.Trim().Trim('"'))
+    }
+    catch {
+        return
     }
 
-    if ($customPath -and (Test-Path -LiteralPath $customPath)) {
-        return (Resolve-Path -LiteralPath $customPath).Path
+    if ($Seen.Add($normalized)) {
+        $List.Add($normalized)
+    }
+}
+
+function Get-Ez2LazerDataPathCandidates {
+    $candidates = [System.Collections.Generic.List[string]]::new()
+    $seen = [System.Collections.Generic.HashSet[string]]::new()
+
+    if ($env:EZ2LAZER_DATA_PATH) {
+        Add-UniquePathCandidate -List $candidates -Seen $seen -Path $env:EZ2LAZER_DATA_PATH
+    }
+
+    foreach ($processName in @('Ez2osu!', 'Ez2osu')) {
+        foreach ($proc in Get-Process -Name $processName -ErrorAction SilentlyContinue) {
+            if ($proc.Path) {
+                Add-UniquePathCandidate -List $candidates -Seen $seen -Path (Split-Path -Parent $proc.Path)
+            }
+        }
+    }
+
+    $appData = [Environment]::GetFolderPath('ApplicationData')
+    foreach ($dirName in @('osu-Ez2Lazer', 'osu-Ez2Lazer-development')) {
+        $configRoot = Join-Path $appData $dirName
+        $customPath = Get-StorageIniFullPath -IniPath (Join-Path $configRoot 'storage.ini')
+        if ($customPath) {
+            Add-UniquePathCandidate -List $candidates -Seen $seen -Path $customPath
+        }
+
+        Add-UniquePathCandidate -List $candidates -Seen $seen -Path $configRoot
+    }
+
+    return $candidates
+}
+
+function Resolve-Ez2LazerDataPath {
+    $candidates = Get-Ez2LazerDataPathCandidates
+
+    foreach ($candidate in $candidates) {
+        if (Test-Ez2LazerDataDirectory $candidate) {
+            return $candidate
+        }
+    }
+
+    foreach ($candidate in $candidates) {
+        if (Test-Path -LiteralPath $candidate) {
+            return $candidate
+        }
     }
 
     return [Environment]::GetFolderPath('Desktop')
@@ -230,9 +282,9 @@ function Show-RefreshTokenResult {
     Write-Host ''
     Write-Host '下一步（任选其一）：' -ForegroundColor Yellow
     Write-Host '  1. 打开 Ez2Lazer → 主菜单背景 → Pixiv → 粘贴 token 并保存'
-    Write-Host '  2. 将模板重命名为 pixiv_auth.json，并放到与 client.realm 同一文件夹'
+    Write-Host '  2. 将模板重命名为 pixiv_auth.json，并放到与 client.realm 同一文件夹（Ez2Lazer 数据目录）'
     if ($UsingDesktopFallback) {
-        Write-Host '  （未检测到 osu 数据目录，模板已保存到桌面；找到 realm 后请手动移动）' -ForegroundColor DarkYellow
+        Write-Host '  （未检测到 Ez2Lazer 数据目录，模板已保存到桌面；找到 realm 后请手动移动）' -ForegroundColor DarkYellow
     }
     Write-Host ''
     Write-Host '正在打开文件所在文件夹...' -ForegroundColor Cyan
@@ -253,7 +305,7 @@ function Show-RefreshTokenResult {
     }
 
     if ($UsingDesktopFallback) {
-        $message += "`n`n未找到 osu 数据目录，模板在桌面。请移到与 client.realm 同目录，或在游戏内直接粘贴保存。"
+        $message += "`n`n未找到 Ez2Lazer 数据目录，模板在桌面。请移到与 client.realm 同目录，或在游戏内直接粘贴保存。"
     }
 
     Add-Type -AssemblyName System.Windows.Forms
@@ -264,14 +316,14 @@ Write-Host 'EzPixivAuth' -ForegroundColor Cyan
 
 $usingDesktopFallback = $false
 if ([string]::IsNullOrWhiteSpace($DataPath)) {
-    $DataPath = Resolve-OsuDataPath
+    $DataPath = Resolve-Ez2LazerDataPath
     $desktopPath = [Environment]::GetFolderPath('Desktop')
     $usingDesktopFallback = ($DataPath -eq $desktopPath)
 }
 
-Write-Host "输出目录: $DataPath"
+Write-Host "Ez2Lazer 输出目录: $DataPath"
 if ($usingDesktopFallback) {
-    Write-Host '（未检测到 osu 数据目录，将使用桌面）' -ForegroundColor DarkYellow
+    Write-Host '（未检测到 Ez2Lazer 数据目录，将使用桌面）' -ForegroundColor DarkYellow
 }
 Write-Host ''
 
