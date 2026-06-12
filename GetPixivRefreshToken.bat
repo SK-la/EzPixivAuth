@@ -1,5 +1,6 @@
 @echo off
 cd /d "%~dp0"
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0GetPixivRefreshToken.ps1"
-if errorlevel 1 pause
-exit /b %errorlevel%
+set EXITCODE=%errorlevel%
+if %EXITCODE% neq 0 pause
+exit /b %EXITCODE%
