@@ -9,14 +9,14 @@
     into Ez2Lazer settings, or rename the template to pixiv_auth.json.
 
 .PARAMETER DataPath
-    osu data directory. Defaults to %AppData%/osu.
+    osu data directory (same folder as client.realm). Auto-detected when omitted.
 
 .EXAMPLE
     Double-click GetPixivRefreshToken.bat
 #>
 [CmdletBinding()]
 param(
-    [string]$DataPath = (Join-Path $env:APPDATA 'osu'),
+    [string]$DataPath = '',
     [string]$ProxyUrl = ''
 )
 
@@ -28,6 +28,65 @@ $clientSecret = 'lsACyCD94FhDUtGTXi3QzcFE2uU1hqtDaKeqrdwj'
 $redirectUri = 'https://app-api.pixiv.net/web/v1/users/auth/pixiv/callback'
 $tokenUrl = 'https://oauth.secure.pixiv.net/auth/token'
 $userAgent = 'PixivAndroidApp/5.0.234 (Android 11; Pixel 5)'
+
+function Get-StorageIniFullPath {
+    param([string]$IniPath)
+
+    if (-not (Test-Path -LiteralPath $IniPath)) {
+        return $null
+    }
+
+    foreach ($line in Get-Content -LiteralPath $IniPath) {
+        if ($line -match '^\s*FullPath\s*=\s*(.+?)\s*$') {
+            return $Matches[1].Trim().Trim('"')
+        }
+    }
+
+    return $null
+}
+
+function Test-OsuDataDirectory {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path) -or -not (Test-Path -LiteralPath $Path)) {
+        return $false
+    }
+
+    if (Test-Path -LiteralPath (Join-Path $Path 'client.realm')) { return $true }
+    if (Test-Path -LiteralPath (Join-Path $Path 'framework.ini')) { return $true }
+    if (Test-Path -LiteralPath (Join-Path $Path 'pixiv_auth.json')) { return $true }
+
+    return @(Get-ChildItem -LiteralPath $Path -Filter 'client_*.realm' -ErrorAction SilentlyContinue).Count -gt 0
+}
+
+function Resolve-OsuDataPath {
+    $defaultRoot = Join-Path $env:APPDATA 'osu'
+    $customPath = Get-StorageIniFullPath -IniPath (Join-Path $defaultRoot 'storage.ini')
+
+    if ($customPath -and (Test-OsuDataDirectory $customPath)) {
+        return (Resolve-Path -LiteralPath $customPath).Path
+    }
+
+    if (Test-OsuDataDirectory $defaultRoot) {
+        return (Resolve-Path -LiteralPath $defaultRoot).Path
+    }
+
+    if ($customPath -and (Test-Path -LiteralPath $customPath)) {
+        return (Resolve-Path -LiteralPath $customPath).Path
+    }
+
+    return [Environment]::GetFolderPath('Desktop')
+}
+
+function Open-OutputFolder {
+    param([string]$FilePath)
+
+    if (-not (Test-Path -LiteralPath $FilePath)) {
+        return
+    }
+
+    Start-Process explorer.exe -ArgumentList ("/select,`"$FilePath`"")
+}
 
 function New-RandomUrlSafeString {
     param([int]$ByteCount = 32)
@@ -153,7 +212,8 @@ function Show-RefreshTokenResult {
     param(
         [string]$RefreshToken,
         [string]$TemplatePath,
-        [string]$AccountName
+        [string]$AccountName,
+        [bool]$UsingDesktopFallback
     )
 
     Set-Clipboard -Value $RefreshToken
@@ -163,30 +223,61 @@ function Show-RefreshTokenResult {
     Write-Host $RefreshToken
     Write-Host '===============================' -ForegroundColor Green
     Write-Host ''
-    Write-Host "已复制到剪贴板。" -ForegroundColor Cyan
+    Write-Host '已复制到剪贴板。' -ForegroundColor Cyan
     Write-Host "模板文件: $TemplatePath" -ForegroundColor Cyan
+    Write-Host ''
+    Write-Host '【安全提醒】refresh_token 等同于账号密钥，请勿发给他人或上传到网盘/聊天群。' -ForegroundColor Red
     Write-Host ''
     Write-Host '下一步（任选其一）：' -ForegroundColor Yellow
     Write-Host '  1. 打开 Ez2Lazer → 主菜单背景 → Pixiv → 粘贴 token 并保存'
-    Write-Host '  2. 将模板文件重命名为 pixiv_auth.json（放在同一 osu 数据目录）'
+    Write-Host '  2. 将模板重命名为 pixiv_auth.json，并放到与 client.realm 同一文件夹'
+    if ($UsingDesktopFallback) {
+        Write-Host '  （未检测到 osu 数据目录，模板已保存到桌面；找到 realm 后请手动移动）' -ForegroundColor DarkYellow
+    }
     Write-Host ''
+    Write-Host '正在打开文件所在文件夹...' -ForegroundColor Cyan
+    Open-OutputFolder -FilePath $TemplatePath
 
-    $message = "refresh_token 已复制到剪贴板。`n`n模板：`n$TemplatePath"
+    $message = @(
+        'refresh_token 已复制到剪贴板。'
+        ''
+        '【请勿将 refresh_token 或 pixiv_auth.json 发给他人】'
+        ''
+        "模板文件：`n$TemplatePath"
+        ''
+        '已打开该文件所在文件夹。'
+    ) -join "`n"
+
     if ($AccountName) {
         $message = "已登录 @$AccountName`n`n$message"
     }
 
+    if ($UsingDesktopFallback) {
+        $message += "`n`n未找到 osu 数据目录，模板在桌面。请移到与 client.realm 同目录，或在游戏内直接粘贴保存。"
+    }
+
     Add-Type -AssemblyName System.Windows.Forms
-    [System.Windows.Forms.MessageBox]::Show($message, 'EzPixivAuth', [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information) | Out-Null
+    [System.Windows.Forms.MessageBox]::Show($message, 'EzPixivAuth', [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning) | Out-Null
 }
 
 Write-Host 'EzPixivAuth' -ForegroundColor Cyan
-Write-Host "Data path: $DataPath"
+
+$usingDesktopFallback = $false
+if ([string]::IsNullOrWhiteSpace($DataPath)) {
+    $DataPath = Resolve-OsuDataPath
+    $desktopPath = [Environment]::GetFolderPath('Desktop')
+    $usingDesktopFallback = ($DataPath -eq $desktopPath)
+}
+
+Write-Host "输出目录: $DataPath"
+if ($usingDesktopFallback) {
+    Write-Host '（未检测到 osu 数据目录，将使用桌面）' -ForegroundColor DarkYellow
+}
 Write-Host ''
 
 if (-not (Test-Path -LiteralPath $DataPath)) {
     New-Item -ItemType Directory -Path $DataPath | Out-Null
-    Write-Host "Created data directory: $DataPath"
+    Write-Host "Created directory: $DataPath"
 }
 
 $codeVerifier = New-RandomUrlSafeString
@@ -221,4 +312,4 @@ if ($response.user) {
     $account = $response.user.account
 }
 
-Show-RefreshTokenResult -RefreshToken $response.refresh_token -TemplatePath $templateFile -AccountName $account
+Show-RefreshTokenResult -RefreshToken $response.refresh_token -TemplatePath $templateFile -AccountName $account -UsingDesktopFallback $usingDesktopFallback
