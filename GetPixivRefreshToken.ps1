@@ -5,8 +5,7 @@
 
 .DESCRIPTION
     Double-click GetPixivRefreshToken.bat. A WebView2 window opens (Pixiv Android user-agent).
-    After login, shows your refresh_token and writes a template JSON file. Paste the token
-    into Ez2Lazer settings, or rename the template to pixiv_auth.json.
+    After login, writes pixiv_auth.json into the Ez2Lazer data folder for immediate use.
 
 .PARAMETER DataPath
     Ez2Lazer data directory (same folder as client.realm). Auto-detected when omitted.
@@ -262,40 +261,31 @@ function Invoke-PixivTokenRequest {
 
 function Show-RefreshTokenResult {
     param(
-        [string]$RefreshToken,
-        [string]$TemplatePath,
+        [string]$AuthFilePath,
         [string]$AccountName,
         [bool]$UsingDesktopFallback
     )
 
-    Set-Clipboard -Value $RefreshToken
-
     Write-Host ''
-    Write-Host '======== refresh_token ========' -ForegroundColor Green
-    Write-Host $RefreshToken
-    Write-Host '===============================' -ForegroundColor Green
+    Write-Host '已写入 pixiv_auth.json（Ez2Lazer 可直接使用）。' -ForegroundColor Green
+    Write-Host "文件: $AuthFilePath" -ForegroundColor Cyan
     Write-Host ''
-    Write-Host '已复制到剪贴板。' -ForegroundColor Cyan
-    Write-Host "模板文件: $TemplatePath" -ForegroundColor Cyan
+    Write-Host '【安全提醒】pixiv_auth.json 等同于账号密钥，请勿发给他人或上传到网盘/聊天群。' -ForegroundColor Red
     Write-Host ''
-    Write-Host '【安全提醒】refresh_token 等同于账号密钥，请勿发给他人或上传到网盘/聊天群。' -ForegroundColor Red
-    Write-Host ''
-    Write-Host '下一步（任选其一）：' -ForegroundColor Yellow
-    Write-Host '  1. 打开 Ez2Lazer → 主菜单背景 → Pixiv → 粘贴 token 并保存'
-    Write-Host '  2. 将模板重命名为 pixiv_auth.json，并放到与 client.realm 同一文件夹（Ez2Lazer 数据目录）'
+    Write-Host '下一步：重新打开或重启 Ez2Lazer，在主菜单背景选择 Pixiv 后点「检查登录」。' -ForegroundColor Yellow
     if ($UsingDesktopFallback) {
-        Write-Host '  （未检测到 Ez2Lazer 数据目录，模板已保存到桌面；找到 realm 后请手动移动）' -ForegroundColor DarkYellow
+        Write-Host '（未检测到 Ez2Lazer 数据目录，文件在桌面；请移到与 client.realm 同目录）' -ForegroundColor DarkYellow
     }
     Write-Host ''
     Write-Host '正在打开文件所在文件夹...' -ForegroundColor Cyan
-    Open-OutputFolder -FilePath $TemplatePath
+    Open-OutputFolder -FilePath $AuthFilePath
 
     $message = @(
-        'refresh_token 已复制到剪贴板。'
+        '已写入 pixiv_auth.json，Ez2Lazer 可直接使用。'
         ''
-        '【请勿将 refresh_token 或 pixiv_auth.json 发给他人】'
+        '【请勿将 pixiv_auth.json 发给他人】'
         ''
-        "模板文件：`n$TemplatePath"
+        "文件：`n$AuthFilePath"
         ''
         '已打开该文件所在文件夹。'
     ) -join "`n"
@@ -305,7 +295,7 @@ function Show-RefreshTokenResult {
     }
 
     if ($UsingDesktopFallback) {
-        $message += "`n`n未找到 Ez2Lazer 数据目录，模板在桌面。请移到与 client.realm 同目录，或在游戏内直接粘贴保存。"
+        $message += "`n`n未找到 Ez2Lazer 数据目录，文件在桌面。请移到与 client.realm 同目录。"
     }
 
     Add-Type -AssemblyName System.Windows.Forms
@@ -355,13 +345,18 @@ if (-not $response.refresh_token) {
     throw "Token response did not include refresh_token.`n$($response | ConvertTo-Json -Depth 4)"
 }
 
-$templateFile = Join-Path $DataPath 'pixiv_auth.json.template'
-$json = @{ refresh_token = $response.refresh_token } | ConvertTo-Json
-Set-Content -LiteralPath $templateFile -Value $json -Encoding UTF8
+$authFile = Join-Path $DataPath 'pixiv_auth.json'
+$authPayload = @{ refresh_token = $response.refresh_token }
+if ($response.user -and $response.user.account) {
+    $authPayload.account = $response.user.account
+}
+
+$json = $authPayload | ConvertTo-Json
+Set-Content -LiteralPath $authFile -Value $json -Encoding UTF8
 
 $account = $null
 if ($response.user) {
     $account = $response.user.account
 }
 
-Show-RefreshTokenResult -RefreshToken $response.refresh_token -TemplatePath $templateFile -AccountName $account -UsingDesktopFallback $usingDesktopFallback
+Show-RefreshTokenResult -AuthFilePath $authFile -AccountName $account -UsingDesktopFallback $usingDesktopFallback

@@ -16,14 +16,11 @@ Source code is fully open so you can audit OAuth handling before logging in.
 2. Extract anywhere.
 3. **Double-click `GetPixivRefreshToken.bat`** (no command line needed).
 4. Log in inside the WebView2 window.
-5. Copy the shown `refresh_token` (also copied to clipboard). A `pixiv_auth.json.template` is saved to your **Ez2Lazer data folder** (`%AppData%\osu-Ez2Lazer`, or the custom path in its `storage.ini`, or the portable install folder if Ez2osu! is running) — same directory as `client.realm`. Falls back to **Desktop** if not found.
-6. Explorer opens that folder automatically. **Do not share** the token or JSON with anyone.
+5. The tool writes **`pixiv_auth.json`** directly into your **Ez2Lazer data folder** (`%AppData%\osu-Ez2Lazer`, or the custom path in its `storage.ini`, or the portable install folder if Ez2osu! is running) — same directory as `client.realm`. Falls back to **Desktop** if not found.
+6. Explorer opens that folder automatically. **Do not share** `pixiv_auth.json` with anyone (it is equivalent to your account password).
 
-Then in Ez2Lazer:
-   - **Main menu → Settings → Background → Pixiv** — paste and **Save**, or
-   - Rename the template to `pixiv_auth.json` in your osu data folder.
-
-The tool does **not** overwrite your existing `pixiv_auth.json` automatically.
+Then in Ez2Lazer: **Main menu → Settings → Background → Pixiv** → **Check login**.  
+Manual paste is only needed if you already have a `refresh_token` from elsewhere (hidden input under **Enter refresh_token manually**).
 
 ## Troubleshooting
 
