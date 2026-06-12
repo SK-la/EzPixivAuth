@@ -22,8 +22,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$clientId = 'MOBrBDS8blbauo1uch9Z4AXbbf'
-$clientSecret = 'ttIDt8NdJJMxTCWRMTtPArt'
+# Public Pixiv app OAuth client (same as ZipFile/pixiv_auth.py PKCE flow; Android login + this client pair).
+$clientId = 'MOBrBDS8blbauoSck0ZfDbtuzpyT'
+$clientSecret = 'lsACyCD94FhDUtGTXi3QzcFE2uU1hqtDaKeqrdwj'
 $redirectUri = 'https://app-api.pixiv.net/web/v1/users/auth/pixiv/callback'
 $tokenUrl = 'https://oauth.secure.pixiv.net/auth/token'
 $userAgent = 'PixivAndroidApp/5.0.234 (Android 11; Pixel 5)'
@@ -120,10 +121,7 @@ function Invoke-PixivTokenRequest {
         Method      = 'Post'
         ContentType = 'application/x-www-form-urlencoded'
         Headers     = @{
-            'User-Agent'     = $userAgent
-            'App-OS'         = 'android'
-            'App-OS-Version' = '11'
-            'App-Version'    = '5.0.234'
+            'User-Agent' = $userAgent
         }
         Body        = $payload
     }

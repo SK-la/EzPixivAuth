@@ -22,6 +22,12 @@ Source code is fully open so you can audit OAuth handling before logging in.
 
 The tool does **not** overwrite your existing `pixiv_auth.json` automatically.
 
+## Troubleshooting
+
+- **Passkey / 通行密钥不可用**：请改用 **邮箱 + 密码** 登录（嵌入式 WebView 不支持通行密钥）。
+- **错误 918 / invalid OAuth client**：请使用最新 [Release](https://github.com/SK-la/EzPixivAuth/releases)；旧版 `client_id` 会被 Pixiv 拒绝。
+- **登录后换 token 失败**：`code` 有效期很短，请关闭登录窗后尽快完成；若在国内网络环境异常，可配置系统代理后重试。
+
 ## Build from source (developers)
 
 ```powershell
