@@ -165,18 +165,18 @@ function Get-PixivOAuthLoginExe {
 
     $projectDir = Join-Path $PSScriptRoot 'PixivOAuthLogin'
     if (-not (Test-Path -LiteralPath $projectDir)) {
-        throw '未找到 PixivOAuthLogin.exe。请从 GitHub Releases 下载完整 zip，或安装 .NET 8 SDK 后重试。'
+        throw 'PixivOAuthLogin.exe not found. Download the full zip from GitHub Releases, or install .NET 8 SDK and retry.'
     }
 
-    Write-Host '首次运行，正在编译登录助手...' -ForegroundColor Cyan
+    Write-Host 'First run: building login helper...' -ForegroundColor Cyan
     & dotnet build $projectDir -c Release --nologo -v q
     if ($LASTEXITCODE -ne 0) {
-        throw '编译失败。请从 Releases 下载预编译包，或安装 .NET 8 SDK。'
+        throw 'Build failed. Download a prebuilt release, or install .NET 8 SDK.'
     }
 
     $built = Join-Path $projectDir 'bin/Release/net8.0-windows/PixivOAuthLogin.exe'
     if (-not (Test-Path -LiteralPath $built)) {
-        throw "未找到 $built"
+        throw "Not found: $built"
     }
 
     return $built
@@ -197,18 +197,18 @@ function Invoke-PixivOAuthLogin {
             $args += $ProxyUrl
         }
 
-        Write-Host '正在打开登录窗口，请在窗口内完成 Pixiv 登录...' -ForegroundColor Yellow
-        Write-Host '（使用 Pixiv Android 客户端身份，勿用外部浏览器。）' -ForegroundColor DarkGray
+        Write-Host 'Opening login window — complete Pixiv sign-in there...' -ForegroundColor Yellow
+        Write-Host '(Uses Pixiv Android client identity; do not use an external browser.)' -ForegroundColor DarkGray
 
         $process = Start-Process -FilePath $exe -ArgumentList $args -Wait -PassThru
 
         if ($process.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $codeFile)) {
-            throw '登录未完成或已取消。'
+            throw 'Login was not completed or was cancelled.'
         }
 
         $code = (Get-Content -LiteralPath $codeFile -Raw).Trim()
         if ([string]::IsNullOrWhiteSpace($code)) {
-            throw '未获取到 authorization code。'
+            throw 'No authorization code was received.'
         }
 
         return $code
@@ -267,35 +267,35 @@ function Show-RefreshTokenResult {
     )
 
     Write-Host ''
-    Write-Host '已写入 pixiv_auth.json（Ez2Lazer 可直接使用）。' -ForegroundColor Green
-    Write-Host "文件: $AuthFilePath" -ForegroundColor Cyan
+    Write-Host 'Wrote pixiv_auth.json (Ez2Lazer can use it directly).' -ForegroundColor Green
+    Write-Host "File: $AuthFilePath" -ForegroundColor Cyan
     Write-Host ''
-    Write-Host '【安全提醒】pixiv_auth.json 等同于账号密钥，请勿发给他人或上传到网盘/聊天群。' -ForegroundColor Red
+    Write-Host '[Security] pixiv_auth.json is equivalent to your account credentials. Do not share it or upload to cloud drives or chat groups.' -ForegroundColor Red
     Write-Host ''
-    Write-Host '下一步：重新打开或重启 Ez2Lazer，在主菜单背景选择 Pixiv 后点「检查登录」。' -ForegroundColor Yellow
+    Write-Host 'Next: restart Ez2Lazer, select Pixiv menu background, then click Check login.' -ForegroundColor Yellow
     if ($UsingDesktopFallback) {
-        Write-Host '（未检测到 Ez2Lazer 数据目录，文件在桌面；请移到与 client.realm 同目录）' -ForegroundColor DarkYellow
+        Write-Host '(Ez2Lazer data folder not found; file is on Desktop — move it next to client.realm)' -ForegroundColor DarkYellow
     }
     Write-Host ''
-    Write-Host '正在打开文件所在文件夹...' -ForegroundColor Cyan
+    Write-Host 'Opening the folder containing the file...' -ForegroundColor Cyan
     Open-OutputFolder -FilePath $AuthFilePath
 
     $message = @(
-        '已写入 pixiv_auth.json，Ez2Lazer 可直接使用。'
+        'Wrote pixiv_auth.json. Ez2Lazer can use it directly.'
         ''
-        '【请勿将 pixiv_auth.json 发给他人】'
+        '[Do not share pixiv_auth.json with anyone]'
         ''
-        "文件：`n$AuthFilePath"
+        "File:`n$AuthFilePath"
         ''
-        '已打开该文件所在文件夹。'
+        'Opened the folder containing this file.'
     ) -join "`n"
 
     if ($AccountName) {
-        $message = "已登录 @$AccountName`n`n$message"
+        $message = "Signed in as @$AccountName`n`n$message"
     }
 
     if ($UsingDesktopFallback) {
-        $message += "`n`n未找到 Ez2Lazer 数据目录，文件在桌面。请移到与 client.realm 同目录。"
+        $message += "`n`nEz2Lazer data folder not found; file is on Desktop. Move it next to client.realm."
     }
 
     Add-Type -AssemblyName System.Windows.Forms
@@ -311,9 +311,9 @@ if ([string]::IsNullOrWhiteSpace($DataPath)) {
     $usingDesktopFallback = ($DataPath -eq $desktopPath)
 }
 
-Write-Host "Ez2Lazer 输出目录: $DataPath"
+Write-Host "Ez2Lazer output folder: $DataPath"
 if ($usingDesktopFallback) {
-    Write-Host '（未检测到 Ez2Lazer 数据目录，将使用桌面）' -ForegroundColor DarkYellow
+    Write-Host '(Ez2Lazer data folder not detected; using Desktop)' -ForegroundColor DarkYellow
 }
 Write-Host ''
 
@@ -329,7 +329,7 @@ $loginUrl = 'https://app-api.pixiv.net/web/v1/login?code_challenge={0}&code_chal
 $code = Invoke-PixivOAuthLogin -LoginUrl $loginUrl -ProxyUrl $ProxyUrl
 
 Write-Host ''
-Write-Host '正在换取 refresh_token...' -ForegroundColor Yellow
+Write-Host 'Exchanging authorization code for refresh_token...' -ForegroundColor Yellow
 
 $response = Invoke-PixivTokenRequest -Body @{
     client_id      = $clientId

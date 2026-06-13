@@ -1,5 +1,4 @@
 using System.Text.RegularExpressions;
-using System.Windows.Forms;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 
@@ -14,7 +13,7 @@ internal static class Program
     {
         if (args.Length < 2 || string.IsNullOrWhiteSpace(args[0]) || string.IsNullOrWhiteSpace(args[1]))
         {
-            MessageBox.Show("用法: PixivOAuthLogin <loginUrl> <outputCodeFile> [proxyUrl]", "EzPixivAuth", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show("Usage: PixivOAuthLogin <loginUrl> <outputCodeFile> [proxyUrl]", "EzPixivAuth", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return 1;
         }
 
@@ -24,13 +23,11 @@ internal static class Program
 
         ApplicationConfiguration.Initialize();
 
-        using var form = new Form
-        {
-            Text = "EzPixivAuth — Pixiv 登录",
-            Width = 520,
-            Height = 720,
-            StartPosition = FormStartPosition.CenterScreen,
-        };
+        using var form = new Form();
+        form.Text = "EzPixivAuth — Pixiv Login";
+        form.Width = 520;
+        form.Height = 720;
+        form.StartPosition = FormStartPosition.CenterScreen;
 
         var webView = new WebView2 { Dock = DockStyle.Fill };
         form.Controls.Add(webView);
@@ -70,7 +67,7 @@ internal static class Program
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    $"WebView2 初始化失败：{ex.Message}\n\n请安装 WebView2 Runtime：\nhttps://developer.microsoft.com/microsoft-edge/webview2/",
+                    $"WebView2 failed to initialize: {ex.Message}\n\nInstall WebView2 Runtime:\nhttps://developer.microsoft.com/microsoft-edge/webview2/",
                     "EzPixivAuth",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
