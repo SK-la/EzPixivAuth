@@ -30,8 +30,10 @@ Manual paste is only needed if you already have a `refresh_token` from elsewhere
 
 ## Build from source (developers)
 
+Open **`EzPixivAuth.sln`** at the repository root (not the old `PixivOAuthLogin/` subfolder).
+
 ```powershell
-dotnet build PixivOAuthLogin -c Release
+dotnet build EzPixivAuth.sln -c Release
 ```
 
 Then double-click `GetPixivRefreshToken.bat` in this folder.

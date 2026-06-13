@@ -11,4 +11,10 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2792.45" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="GetPixivRefreshToken.ps1" />
+    <None Include="GetPixivRefreshToken.bat" />
+    <None Include="README.md" />
+    <None Include="LICENSE" />
+  </ItemGroup>
 </Project>

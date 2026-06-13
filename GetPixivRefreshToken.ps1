@@ -156,25 +156,26 @@ function Get-Sha256Base64Url {
 function Get-PixivOAuthLoginExe {
     $candidates = @(
         (Join-Path $PSScriptRoot 'PixivOAuthLogin.exe'),
-        (Join-Path $PSScriptRoot 'PixivOAuthLogin/bin/Release/net8.0-windows/PixivOAuthLogin.exe')
+        (Join-Path $PSScriptRoot 'bin/Release/net8.0-windows/PixivOAuthLogin.exe'),
+        (Join-Path $PSScriptRoot 'bin/Release/net8.0-windows/win-x64/PixivOAuthLogin.exe')
     )
 
     foreach ($path in $candidates) {
         if (Test-Path -LiteralPath $path) { return $path }
     }
 
-    $projectDir = Join-Path $PSScriptRoot 'PixivOAuthLogin'
-    if (-not (Test-Path -LiteralPath $projectDir)) {
+    $projectFile = Join-Path $PSScriptRoot 'PixivOAuthLogin.csproj'
+    if (-not (Test-Path -LiteralPath $projectFile)) {
         throw 'PixivOAuthLogin.exe not found. Download the full zip from GitHub Releases, or install .NET 8 SDK and retry.'
     }
 
     Write-Host 'First run: building login helper...' -ForegroundColor Cyan
-    & dotnet build $projectDir -c Release --nologo -v q
+    & dotnet build $projectFile -c Release --nologo -v q
     if ($LASTEXITCODE -ne 0) {
         throw 'Build failed. Download a prebuilt release, or install .NET 8 SDK.'
     }
 
-    $built = Join-Path $projectDir 'bin/Release/net8.0-windows/PixivOAuthLogin.exe'
+    $built = Join-Path $PSScriptRoot 'bin/Release/net8.0-windows/PixivOAuthLogin.exe'
     if (-not (Test-Path -LiteralPath $built)) {
         throw "Not found: $built"
     }

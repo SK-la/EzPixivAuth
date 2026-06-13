@@ -19,7 +19,7 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Publish PixivOAuthLogin
-        run: dotnet publish PixivOAuthLogin/PixivOAuthLogin.csproj -c Release -r win-x64 --self-contained false -o dist
+        run: dotnet publish PixivOAuthLogin.csproj -c Release -r win-x64 --self-contained false -o dist
 
       - name: Add launcher scripts
         shell: pwsh
