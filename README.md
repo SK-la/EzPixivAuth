@@ -32,6 +32,8 @@ Manual paste is only needed if you already have a `refresh_token` from elsewhere
 
 Open **`EzPixivAuth.sln`** at the repository root (not the old `PixivOAuthLogin/` subfolder).
 
+In JetBrains Rider, use the shared run configuration **GetPixivRefreshToken** (`.run/GetPixivRefreshToken.run.xml`; built-in Shell Script, no extra plugin).
+
 ```powershell
 dotnet build EzPixivAuth.sln -c Release
 ```
