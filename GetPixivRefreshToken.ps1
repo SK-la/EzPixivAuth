@@ -1,7 +1,7 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
-    EzPixivAuth — one-time Pixiv OAuth helper for Ez2Lazer.
+    EzPixivAuth - one-time Pixiv OAuth helper for Ez2Lazer.
 
 .DESCRIPTION
     Double-click GetPixivRefreshToken.bat. A WebView2 window opens (Pixiv Android user-agent).
@@ -21,6 +21,21 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# PS 5.1 on localized Windows defaults to system ANSI unless the script has a UTF-8 BOM.
+# Keep console + file I/O on UTF-8 so paths and messages render correctly everywhere.
+try {
+    $utf8 = New-Object System.Text.UTF8Encoding $false
+    [Console]::InputEncoding = $utf8
+    [Console]::OutputEncoding = $utf8
+    $OutputEncoding = $utf8
+    if ($Host.Name -eq 'ConsoleHost') {
+        chcp 65001 | Out-Null
+    }
+}
+catch {
+    # Some hosts (IDE run configs) reject chcp; user-visible text stays ASCII-only.
+}
+
 # Public Pixiv app OAuth client (same as ZipFile/pixiv_auth.py PKCE flow; Android login + this client pair).
 $clientId = 'MOBrBDS8blbauoSck0ZfDbtuzpyT'
 $clientSecret = 'lsACyCD94FhDUtGTXi3QzcFE2uU1hqtDaKeqrdwj'
@@ -35,7 +50,7 @@ function Get-StorageIniFullPath {
         return $null
     }
 
-    foreach ($line in Get-Content -LiteralPath $IniPath) {
+    foreach ($line in Get-Content -LiteralPath $IniPath -Encoding UTF8) {
         if ($line -match '^\s*FullPath\s*=\s*(.+?)\s*$') {
             return $Matches[1].Trim().Trim('"')
         }
@@ -198,7 +213,7 @@ function Invoke-PixivOAuthLogin {
             $args += $ProxyUrl
         }
 
-        Write-Host 'Opening login window — complete Pixiv sign-in there...' -ForegroundColor Yellow
+        Write-Host 'Opening login window - complete Pixiv sign-in there...' -ForegroundColor Yellow
         Write-Host '(Uses Pixiv Android client identity; do not use an external browser.)' -ForegroundColor DarkGray
 
         $process = Start-Process -FilePath $exe -ArgumentList $args -Wait -PassThru
@@ -275,7 +290,7 @@ function Show-RefreshTokenResult {
     Write-Host ''
     Write-Host 'Next: restart Ez2Lazer, select Pixiv menu background, then click Check login.' -ForegroundColor Yellow
     if ($UsingDesktopFallback) {
-        Write-Host '(Ez2Lazer data folder not found; file is on Desktop — move it next to client.realm)' -ForegroundColor DarkYellow
+        Write-Host '(Ez2Lazer data folder not found; file is on Desktop - move it next to client.realm)' -ForegroundColor DarkYellow
     }
     Write-Host ''
     Write-Host 'Opening the folder containing the file...' -ForegroundColor Cyan
@@ -353,7 +368,8 @@ if ($response.user -and $response.user.account) {
 }
 
 $json = $authPayload | ConvertTo-Json
-Set-Content -LiteralPath $authFile -Value $json -Encoding UTF8
+$utf8NoBom = New-Object System.Text.UTF8Encoding $false
+[System.IO.File]::WriteAllText($authFile, $json, $utf8NoBom)
 
 $account = $null
 if ($response.user) {

@@ -24,7 +24,7 @@ internal static class Program
         ApplicationConfiguration.Initialize();
 
         using var form = new Form();
-        form.Text = "EzPixivAuth — Pixiv Login";
+        form.Text = "EzPixivAuth - Pixiv Login";
         form.Width = 520;
         form.Height = 720;
         form.StartPosition = FormStartPosition.CenterScreen;
